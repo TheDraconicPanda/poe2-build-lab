@@ -3,3 +3,6 @@
 .table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px;text-align:left}th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent);font-weight:500}td{overflow-wrap:anywhere}button:disabled{opacity:.6;cursor:wait}#calc-provenance{overflow-wrap:anywhere}
 
 fieldset{border:1px solid var(--line);padding:18px;margin:20px 0;border-radius:8px;min-width:0}legend{padding:0 8px;color:var(--muted)}
+
+input[type=text]{background:var(--bg);border:1px solid #50615e;color:var(--text);border-radius:6px;padding:10px;width:100%}input,select,textarea{font-size:16px}button,summary{min-height:44px}input[type=checkbox]{width:20px;height:20px;vertical-align:middle;margin-right:8px}.file-label{display:block;margin-top:20px}.file-label input{display:block;margin-top:8px;max-width:100%}#cancel-calculation{position:sticky;top:12px;z-index:10}#scenario-provenance{overflow-wrap:anywhere}@media(max-width:480px){main{padding:32px 14px}section{padding:20px 16px}.fields,.metrics{grid-template-columns:minmax(0,1fr)}.actions>*{max-width:100%}button{width:100%}.check{padding:6px 0}}
+.check{min-height:44px}input[type=file]{min-height:44px}

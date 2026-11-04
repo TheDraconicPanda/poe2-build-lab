@@ -1,7 +1,11 @@
+import {applyScenario, decodeExport} from './build.js';
+import {request, cancelCalculation} from './engine-client.js';
+import {savedBuilds, saveBuild, deleteBuild, downloadBackup, readBackup} from './storage.js';
 const $ = id => document.getElementById(id);
 let build;
 let importedExport;
 let importGeneration = 0;
+let activeSaveId, pendingSave, records=[];
 const number = value => value == null ? 'Not exported' : value.toLocaleString(undefined, {maximumFractionDigits: 2});
 $('file').addEventListener('change', async event => {
   const file = event.target.files[0];
@@ -12,6 +16,9 @@ $('file').addEventListener('change', async event => {
 $('import-form').addEventListener('submit', async event => {
   event.preventDefault();
   const generation = ++importGeneration;
+  cancelCalculation();
+  const restore = pendingSave; pendingSave = null;
+  activeSaveId = restore?.id ?? crypto.randomUUID();
   importedExport = null;
   $('calculated').hidden = true;
   $('calc-message').textContent = '';
@@ -22,10 +29,8 @@ $('import-form').addEventListener('submit', async event => {
   $('results').hidden = true;
   try {
     const exportText = $('export').value;
-    const response = await fetch('/api/import', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({export: exportText})});
-    const data = await response.json();
+    const data = await request('import', {export: exportText});
     if (generation !== importGeneration) return;
-    if (!response.ok) throw new Error(data.error);
     build = data;
     importedExport = exportText;
     $('character').textContent = `Level ${data.character.level} ${data.character.characterClass} · ${data.character.ascendancy} · Tree ${data.character.treeVersion ?? 'unknown'}`;
@@ -60,7 +65,10 @@ $('import-form').addEventListener('submit', async event => {
     $('ring-left').value = 30; $('ring-right').value = 20; $('belt-charms').value = 3;
     $('results').hidden = false;
     $('message').textContent = `Imported ${data.equipment.length} equipped items and ${data.jewels.length} jewels.`;
+    $('build-name').value = restore?.name ?? `${data.character.ascendancy ?? data.character.characterClass} · Level ${data.character.level}`;
+    if (restore) restoreScenario(restore.scenario);
     compare(); syncScenarioFields();
+    await persistCurrent();
   } catch(error) { build = null; $('message').textContent = error.message; }
 });
 function compare() {
@@ -92,6 +100,7 @@ function setEngineBusy(busy) {
   $('calculate').disabled = busy;
   $('scenario-button').disabled = busy;
   $('scenario-fields').disabled = busy;
+  $('cancel-calculation').hidden = !busy;
 }
 for (const id of ['edit-jewels','edit-chest','jewel-mode','jewel','target','chest-es','belt-mode','belt-socket','belt-rune','belt-effect','ring-left','ring-right','belt-charms']) {
   $(id).addEventListener('input', () => {
@@ -104,23 +113,13 @@ $('scenario-form').addEventListener('submit', async event => {
   event.preventDefault();
   if (!importedExport) return;
   const generation = importGeneration;
-  const scenario = {};
-  if ($('edit-jewels').checked) {
-    scenario.jewels = {mode: $('jewel-mode').value};
-    if (scenario.jewels.mode !== 'all') scenario.jewels.itemId = $('jewel').value;
-    if (scenario.jewels.mode !== 'remove') scenario.jewels.targetPercent = Number($('target').value);
-  }
-  if ($('edit-chest').checked) scenario.chestEnergyShield = Number($('chest-es').value);
-  if ($('belt-mode').value === 'rune') scenario.darknessRune = {socket:Number($('belt-socket').value), rune:$('belt-rune').value, effectPercent:Number($('belt-effect').value)};
-  if ($('belt-mode').value === 'ingenuity') scenario.ingenuity = {leftPercent:Number($('ring-left').value), rightPercent:Number($('ring-right').value), charmSlots:Number($('belt-charms').value)};
+  const scenario = currentScenario();
   setEngineBusy(true);
   $('scenario-results').hidden = true;
-  $('scenario-message').textContent = 'Calculating original and changed builds…';
+  $('scenario-message').textContent = 'Calculating original and changed builds on this device…';
   try {
-    const response = await fetch('/api/compare', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export: importedExport, scenario})});
-    const data = await response.json();
+    const data = await request('compare', {export: importedExport, scenario}, message => {if(generation===importGeneration)$('scenario-message').textContent=message;});
     if (generation !== importGeneration) return;
-    if (!response.ok) throw new Error(data.error);
     tableRows('scenario-totals', ['Life','EnergyShield'].map(stat => {
       const row = data.deltas[stat];
       return [stat === 'Life' ? 'Life' : 'Energy Shield', number(row.before), number(row.after), `${row.absolute > 0 ? '+' : ''}${number(row.absolute)}`, row.percent == null ? '—' : `${row.percent > 0 ? '+' : ''}${number(row.percent)}%`];
@@ -144,7 +143,8 @@ $('scenario-form').addEventListener('submit', async event => {
     listRows('scenario-warnings', coverage);
     $('scenario-provenance').textContent = `Engine ${data.upgraded.provenance.commit} · tree ${data.upgraded.provenance.treeVersion} · Saved totals removed on both sides.`;
     $('scenario-results').hidden = false;
-    $('scenario-message').textContent = 'Comparison complete.';
+    $('scenario-message').textContent = 'Comparison complete. Calculated on this device.';
+    await persistCurrent();
   } catch(error) { if (generation === importGeneration) $('scenario-message').textContent = error.message; }
   finally { if (generation === importGeneration) {setEngineBusy(false); syncScenarioFields();} }
 });
@@ -162,10 +162,8 @@ $('calculate').addEventListener('click', async () => {
   $('calculated').hidden = true;
   $('calc-message').textContent = 'Recalculating from items, tree, quests and skills. This can take up to a minute…';
   try {
-    const response = await fetch('/api/calculate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export: importedExport})});
-    const data = await response.json();
+    const data = await request('calculate', {export: importedExport}, message => {if(generation===importGeneration)$('calc-message').textContent=message;});
     if (generation !== importGeneration) return;
-    if (!response.ok) throw new Error(data.error);
     $('calculated-life').textContent = number(data.totals.Life);
     $('calculated-es').textContent = number(data.totals.EnergyShield);
     $('calc-comparison').textContent = data.reconciled ? 'Both calculated totals match the export. Saved outputs were removed before calculation.' : Object.entries(data.comparison).map(([stat, row]) => `${stat}: ${row.reference == null ? 'no exported reference' : `difference ${number(row.difference)}`}`).join(' · ');
@@ -184,3 +182,42 @@ $('calculate').addEventListener('click', async () => {
   } catch(error) { if (generation === importGeneration) $('calc-message').textContent = error.message; }
   finally { if (generation === importGeneration) {setEngineBusy(false); syncScenarioFields();} }
 });
+
+function currentScenario() {
+  const scenario={};
+  if ($('edit-jewels').checked) {
+    scenario.jewels={mode:$('jewel-mode').value};
+    if(scenario.jewels.mode!=='all') scenario.jewels.itemId=$('jewel').value;
+    if(scenario.jewels.mode!=='remove') scenario.jewels.targetPercent=Number($('target').value);
+  }
+  if($('edit-chest').checked) scenario.chestEnergyShield=Number($('chest-es').value);
+  if($('belt-mode').value==='rune') scenario.darknessRune={socket:Number($('belt-socket').value),rune:$('belt-rune').value,effectPercent:Number($('belt-effect').value)};
+  if($('belt-mode').value==='ingenuity') scenario.ingenuity={leftPercent:Number($('ring-left').value),rightPercent:Number($('ring-right').value),charmSlots:Number($('belt-charms').value)};
+  return scenario;
+}
+function restoreScenario(s={}) {
+  $('edit-jewels').checked=Boolean(s.jewels); $('edit-chest').checked='chestEnergyShield' in s;
+  if(s.jewels) {$('jewel-mode').value=s.jewels.mode;$('jewel').value=s.jewels.itemId ?? $('jewel').value;$('target').value=s.jewels.targetPercent ?? 20;}
+  if('chestEnergyShield' in s) $('chest-es').value=s.chestEnergyShield;
+  $('belt-mode').value=s.darknessRune?'rune':s.ingenuity?'ingenuity':'keep';
+  if(s.darknessRune) {$('belt-socket').value=s.darknessRune.socket;$('belt-rune').value=s.darknessRune.rune;$('belt-effect').value=s.darknessRune.effectPercent ?? 94;}
+  if(s.ingenuity) {$('ring-left').value=s.ingenuity.leftPercent;$('ring-right').value=s.ingenuity.rightPercent;$('belt-charms').value=s.ingenuity.charmSlots;}
+}
+async function refreshLibrary() {
+  try {records=await savedBuilds();$('saved-builds').replaceChildren(...records.map(record=>{const option=document.createElement('option');option.value=record.id;option.textContent=record.name;return option;}));if(activeSaveId)$('saved-builds').value=activeSaveId;}
+  catch(error) {$('library-status').textContent='Browser storage is unavailable. Use Export backup before closing this page.';}
+}
+async function persistCurrent() {
+  if(!importedExport) return;
+  const record={id:activeSaveId,name:$('build-name').value.trim().slice(0,200)||'Saved build',export:importedExport,scenario:currentScenario(),updatedAt:Date.now()};
+  try {await saveBuild(record);await refreshLibrary();$('library-status').textContent='Saved on this device. Export a backup to keep a separate copy in Files.';}
+  catch(error) {records=[...records.filter(r=>r.id!==record.id),record];$('library-status').textContent='Could not save in browser storage. Export a backup before closing this page.';}
+}
+$('save-build').addEventListener('click',persistCurrent);
+$('load-build').addEventListener('click',()=>{const record=records.find(r=>r.id===$('saved-builds').value);if(!record)return;pendingSave=record;$('export').value=record.export;$('import-form').requestSubmit();});
+$('delete-build').addEventListener('click',async()=>{const id=$('saved-builds').value;if(!id)return;try{await deleteBuild(id);if(id===activeSaveId)activeSaveId=crypto.randomUUID();await refreshLibrary();$('library-status').textContent='Saved copy removed. The current imported build is still open.';}catch(error){$('library-status').textContent=error.message;}});
+$('export-backup').addEventListener('click',async()=>{await persistCurrent();if(records.length)downloadBackup(records);else $('library-status').textContent='Import a build before exporting a backup.';});
+$('backup-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>20_000_000)throw new Error('Backup exceeds 20 MB.');const restored=readBackup(await file.text());for(const record of restored){applyScenario(await decodeExport(record.export),record.scenario);const existing=records.find(r=>r.id===record.id);await saveBuild({...record,id:existing?crypto.randomUUID():record.id});}await refreshLibrary();$('library-status').textContent=`Restored ${restored.length} build(s). Select one and tap Load.`;}catch(error){$('library-status').textContent=error.message;}finally{event.target.value='';}});
+$('cancel-calculation').addEventListener('click',()=>{cancelCalculation();setEngineBusy(false);syncScenarioFields();});
+await refreshLibrary();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').then(()=>{$('offline-status').textContent='Preparing offline files…';navigator.serviceWorker.addEventListener('message',event=>{if(event.data==='offline-ready')$('offline-status').textContent='Ready offline on this device.';});navigator.serviceWorker.ready.then(()=>navigator.serviceWorker.controller?.postMessage('status'));}).catch(()=>{$('offline-status').textContent='Offline caching is unavailable; your saved builds can still be backed up.';});

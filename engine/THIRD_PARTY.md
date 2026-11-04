@@ -11,3 +11,11 @@ ignored `.local/` directories and are not vendored into this repository.
 Retain these licence/third-party notices if redistributing source or installed
 artifacts. PoB game data remains subject to its upstream notices. No affiliation
 with Grinding Gear Games or the PoB project is implied.
+
+## Browser distribution
+
+The static build distributes PoB source/data, Wasmoon's Lua 5.4 WebAssembly runtime
+and platform compatibility adapters. Generated syntax adaptations are documented
+in docs/BROWSER.md. The published site's `licenses/` directory includes the full
+PoB2 third-party notices, Wasmoon's MIT licence, and Lua's MIT licence. The native
+LuaJIT and luautf8 binaries are not part of the browser distribution.

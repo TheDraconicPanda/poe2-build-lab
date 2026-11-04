@@ -1,0 +1,11 @@
+{
+  "name": "poe2-build-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python scripts/build_browser.py && esbuild browser/worker.js --bundle --format=esm --platform=browser --external:fs --external:path --external:url --external:module --external:crypto --external:child_process --outfile=dist/worker.js && cp node_modules/wasmoon/dist/glue.wasm dist/glue.wasm",
+    "serve": "python -m http.server 8001 --bind 127.0.0.1 --directory dist"
+  },
+  "devDependencies": {"esbuild": "0.25.12", "wasmoon": "1.16.0"}
+}

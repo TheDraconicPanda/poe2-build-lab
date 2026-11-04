@@ -27,9 +27,11 @@ Milestone 3 covers isolated final local chest ES, not wholesale item replacement
 
 ## Design decision
 
-The app now runs a pinned PoB2 headless adapter (`engine/calculator.py` and
-`engine/runner.lua`). It reuses the upstream tree, parser and calculation pipeline
-without changing their arithmetic. Results record the exact revision, tree and
+The primary app now runs the pinned PoB2 engine in a browser WebAssembly worker
+(`browser/`). The native adapter (`engine/calculator.py`, `engine/runner.lua`)
+remains a developer reference oracle. Both reuse the upstream tree, parser and
+calculation pipeline. Browser packaging applies documented syntax/platform
+compatibility adapters without replacing defence formulae; see BROWSER.md. Results record the exact revision, tree and
 selected item/config/skill/tree sets. The supplied weapon-set choice is preserved
 in the XML. Upstream licences are retained with installed sources; no upstream
 code or binaries are vendored. See engine/THIRD_PARTY.md and docs/BASELINE.md.
