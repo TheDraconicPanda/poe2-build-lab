@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,11 +30,7 @@ jobs:
         env:
           BROWSER_ENGINE: webkit
           BROWSER_BASE_URL: http://127.0.0.1:8001/poe2-build-lab/
-        run: |
-          mkdir /tmp/site
-          ln -s "$GITHUB_WORKSPACE/dist" /tmp/site/poe2-build-lab
-          python -m http.server 8001 --bind 127.0.0.1 --directory /tmp/site > /tmp/static-app.log 2>&1 &
-          python scripts/ci_browser_tests.py
+        run: python scripts/ci_browser_tests.py
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -42,7 +38,7 @@ jobs:
           path: dist
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

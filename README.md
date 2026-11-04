@@ -63,8 +63,7 @@ With the static preview running and Playwright installed:
 python tests/browser_static_smoke.py
 python tests/browser_engine_parity.py
 # Safari-engine runs (WebKit must be installed):
-BROWSER_ENGINE=webkit python tests/browser_static_smoke.py
-BROWSER_ENGINE=webkit python tests/browser_engine_parity.py
+BROWSER_ENGINE=webkit python scripts/ci_browser_tests.py
 ```
 
 The Pages workflow installs WebKit and gates deployment on these tests. The local

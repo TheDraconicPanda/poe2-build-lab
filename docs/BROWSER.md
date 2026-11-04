@@ -58,7 +58,9 @@ All necessary calculation assets are cached before offline-ready is reported.
 Caches and IndexedDB names are scoped to this site's path, preserving other apps
 hosted under the same GitHub Pages origin. Asset changes update the cache version.
 Offline tests reload the page, restore the saved build from IndexedDB, create a
-fresh worker and recalculate the baseline while the context is offline.
+fresh worker and recalculate the baseline. Chromium uses protocol offline mode.
+WebKit uses actual origin loss (the isolated file server is stopped), avoiding an
+automation-level internal-navigation error while retaining the same assertions.
 
 ## GitHub Pages
 

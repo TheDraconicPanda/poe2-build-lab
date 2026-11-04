@@ -1,6 +1,6 @@
 """Optional browser smoke: run the app first; needs Playwright + Chromium."""
 from pathlib import Path
-import os, json
+import os, json, signal, time, urllib.request
 from playwright.sync_api import sync_playwright, expect
 
 fixture = Path(__file__).parent / 'fixtures' / 'abyssal-lich-0.5.5.xml'
@@ -128,7 +128,23 @@ with sync_playwright() as p:
     page.locator('#load-build').click()
     expect(page.locator('#results')).to_be_visible()
     page.wait_for_function('() => !!navigator.serviceWorker.controller')
-    page.context.set_offline(True)
+    if engine == 'webkit':
+        # WebKit's protocol-level offline toggle can fail navigation internally.
+        # Stop the actual origin instead; cache-only reload and a fresh-worker
+        # calculation still must succeed with the origin unreachable.
+        server_pid=os.environ.get('STATIC_TEST_SERVER_PID')
+        assert server_pid, 'Run scripts/ci_browser_tests.py for controlled-origin WebKit offline validation.'
+        os.kill(int(server_pid),signal.SIGTERM)
+        for _ in range(50):
+            try:
+                urllib.request.urlopen(page.url,timeout=.2).close()
+                time.sleep(.1)
+            except OSError:
+                break
+        else:
+            raise AssertionError('Static origin remained reachable during offline test')
+    else:
+        page.context.set_offline(True)
     page.reload()
     expect(page.locator('#saved-builds option')).to_have_count(1)
     page.locator('#load-build').click()
