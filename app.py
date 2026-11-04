@@ -7,6 +7,7 @@ import zlib
 import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from engine.calculator import calculate, EngineUnavailable
 
 ROOT = Path(__file__).parent
 LIMIT = 2_000_000
@@ -104,7 +105,7 @@ def parse_build(text):
     quests = [dict(name=i.get('name'), value=i.get('string')) for i in config_set.findall('Input') if i.get('name', '').startswith('quest')] if config_set is not None else []
     warnings = [
         'Life and ES below are saved PoB results, not independently calculated totals.',
-        'Passive node IDs require matching versioned tree data; skills, conditions, conversions and rounding have not been evaluated.',
+        'Import alone does not evaluate passive nodes, skills, conditions, conversions or rounding; use independent recalculation below.',
         'Equipment ES headers are exported item data; do not assume they are final local ES or multiply them again without checking PoB item calculations.',
     ]
     if spec is None:
@@ -129,7 +130,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_POST(self):
-        if self.path != '/api/import':
+        if self.path not in ('/api/import', '/api/calculate'):
             self.send_error(404)
             return
         try:
@@ -140,7 +141,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data, dict) or not isinstance(data.get('export'), str):
                 raise ValueError('Expected an export string.')
             result = parse_build(data['export'])
+            if self.path == '/api/calculate':
+                result = calculate(data['export'])
             status = 200
+        except EngineUnavailable as exc:
+            result, status = dict(error=str(exc)), 503
         except (ValueError, TypeError) as exc:
             result, status = dict(error=str(exc)), 400
         payload = json.dumps(result).encode()

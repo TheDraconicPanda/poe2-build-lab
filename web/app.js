@@ -1,5 +1,7 @@
 const $ = id => document.getElementById(id);
 let build;
+let importedExport;
+let importGeneration = 0;
 const number = value => value == null ? 'Not exported' : value.toLocaleString(undefined, {maximumFractionDigits: 2});
 $('file').addEventListener('change', async event => {
   const file = event.target.files[0];
@@ -9,13 +11,21 @@ $('file').addEventListener('change', async event => {
 });
 $('import-form').addEventListener('submit', async event => {
   event.preventDefault();
+  const generation = ++importGeneration;
+  importedExport = null;
+  $('calculated').hidden = true;
+  $('calc-message').textContent = '';
+  $('calculate').disabled = false;
   $('message').textContent = 'Reading export…';
   $('results').hidden = true;
   try {
-    const response = await fetch('/api/import', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({export: $('export').value})});
+    const exportText = $('export').value;
+    const response = await fetch('/api/import', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({export: exportText})});
     const data = await response.json();
+    if (generation !== importGeneration) return;
     if (!response.ok) throw new Error(data.error);
     build = data;
+    importedExport = exportText;
     $('character').textContent = `Level ${data.character.level} ${data.character.characterClass} · ${data.character.ascendancy} · Tree ${data.character.treeVersion ?? 'unknown'}`;
     $('life').textContent = number(data.stats.Life);
     $('es').textContent = number(data.stats.EnergyShield);
@@ -63,3 +73,39 @@ function estimate() {
 }
 for (const id of ['game-life', 'game-es']) $(id).addEventListener('input', compare);
 for (const id of ['pool', 'jewel', 'target', 'all']) $(id).addEventListener('input', estimate);
+
+function listRows(id, lines) {
+  $(id).replaceChildren(...lines.map(text => {const li = document.createElement('li'); li.textContent = text; return li;}));
+}
+function tableRows(id, rows) {
+  $(id).replaceChildren(...rows.map(cells => {const tr = document.createElement('tr'); for (const value of cells) {const td = document.createElement('td'); td.textContent = value ?? '—'; tr.append(td);} return tr;}));
+}
+$('calculate').addEventListener('click', async () => {
+  if (!importedExport) return;
+  const generation = importGeneration;
+  $('calculate').disabled = true;
+  $('calculated').hidden = true;
+  $('calc-message').textContent = 'Recalculating from items, tree, quests and skills. This can take up to a minute…';
+  try {
+    const response = await fetch('/api/calculate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export: importedExport})});
+    const data = await response.json();
+    if (generation !== importGeneration) return;
+    if (!response.ok) throw new Error(data.error);
+    $('calculated-life').textContent = number(data.totals.Life);
+    $('calculated-es').textContent = number(data.totals.EnergyShield);
+    $('calc-comparison').textContent = data.reconciled ? 'Both calculated totals match the export. Saved outputs were removed before calculation.' : Object.entries(data.comparison).map(([stat, row]) => `${stat}: ${row.reference == null ? 'no exported reference' : `difference ${number(row.difference)}`}`).join(' · ');
+    $('calc-provenance').textContent = `Engine ${data.provenance.commit} · tree ${data.provenance.treeVersion} · ${data.provenance.patch}`;
+    listRows('life-breakdown', data.breakdown.Life.lines);
+    tableRows('es-breakdown', data.breakdown.EnergyShield.slots.map(row => [row.description || row.source, number(row.base), row.increased || '× 1', row.more || '× 1', row.total]));
+    listRows('calc-warnings', [
+      'Agreement validates these two totals for this build and engine snapshot; it does not prove all item or combat mechanics are supported.',
+      ...data.unsupported.map(row => `Unparsed modifier (${row.slot}): ${row.line}`),
+      'The upstream tree logs missing connector nodes at startup. All allocated node IDs in this import were checked and exist.'
+    ]);
+    tableRows('ledger', data.ledger.map(row => [row.scope, `${row.stat} / ${row.kind}`, String(row.value), row.sourceName ? `${row.sourceName} (${row.source})` : row.source]));
+    $('diagnostics').textContent = data.diagnostics.join('\n');
+    $('calculated').hidden = false;
+    $('calc-message').textContent = 'Recalculation complete.';
+  } catch(error) { if (generation === importGeneration) $('calc-message').textContent = error.message; }
+  finally { if (generation === importGeneration) $('calculate').disabled = false; }
+});

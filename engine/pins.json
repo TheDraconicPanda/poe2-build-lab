@@ -1,0 +1,5 @@
+{
+  "pob2": {"url": "https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2.git", "commit": "bb52d6b368307457eb9c54bb13f1829993d390b1"},
+  "luajit": {"url": "https://github.com/LuaJIT/LuaJIT.git", "commit": "ea9eb7edb5eac4a9d175d74523db34fac0fa5180"},
+  "luautf8": {"url": "https://github.com/starwing/luautf8.git", "commit": "1bb70d45208d4033dcc75efee968be70534dd3ab"}
+}

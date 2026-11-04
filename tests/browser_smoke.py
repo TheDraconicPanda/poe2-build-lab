@@ -26,6 +26,14 @@ with sync_playwright() as p:
     page.locator('#all').check()
     assert '6,243.28' in page.locator('#estimate').inner_text()
     assert '15 percentage points across 5 jewel(s)' in page.locator('#estimate').inner_text()
+    page.locator('#calculate').click()
+    expect(page.locator('#calculated')).to_be_visible(timeout=65000)
+    assert page.locator('#calculated-life').inner_text() == '1,892'
+    assert page.locator('#calculated-es').inner_text() == '6,091'
+    assert 'Both calculated totals match' in page.locator('#calc-comparison').inner_text()
+    assert page.locator('#es-breakdown tr').count() == 6
+    assert page.locator('#ledger tr').count() > 100
+    assert "Nature's Archon" in page.locator('#calc-warnings').inner_text()
     page.set_viewport_size({'width':390, 'height':844})
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     page.screenshot(path='/tmp/poe2-build-lab-mobile.png', full_page=True)
@@ -35,4 +43,4 @@ with sync_playwright() as p:
     assert page.locator('#results').is_hidden()
     assert not errors, errors
     browser.close()
-print('Browser smoke passed: import, equipment, game comparison, jewel scenarios, mobile, invalid import.')
+print('Browser smoke passed: import, equipment, game comparison, independent recalculation, ledger, jewel scenarios, mobile, invalid import.')

@@ -2,8 +2,9 @@
 
 ## Target and completion rule
 
-Version 1 targets the supplied Abyssal Lich in **PoE2 0.5.5**, with a fixed PoB2
-engine/data revision to be selected and verified. The user confirms maximum Life
+Version 1 targets the supplied Abyssal Lich in **PoE2 0.5.5**. Engine snapshot
+`bb52d6b368307457eb9c54bb13f1829993d390b1` now reproduces its two defence totals;
+this validates the build/snapshot pair rather than every rule in that game patch. The user confirms maximum Life
 1,892 and maximum Energy Shield 6,091 match the game. The export's `targetVersion`
 is `0_1` while its passive tree is `0_5`; neither identifies a precise engine build.
 Do not silently run a newer ruleset and call the result 0.5.5 accurate.
@@ -14,7 +15,7 @@ not independent verification. No calibrating unknown contributions to force tota
 | Milestone | Deliverable | Acceptance gate | State |
 |---|---|---|---|
 | 1. Import and audit | Local web app reads PoB2 XML/export codes, active gear, jewels, quests and reference totals | Actual supplied export imports; 14 equipped items, five allocated jewels; 1,892 Life / 6,091 ES displayed explicitly as exported | Implemented |
-| 2. Reconciled baseline | Versioned engine adapter plus source ledger for level/attributes, gear, tree, quests, skills/conditions and interactions | Calculate both totals without reading saved PlayerStat outputs; match exact integers; every contribution traceable; unsupported modifiers surfaced | Pending |
+| 2. Reconciled baseline | Versioned engine adapter plus source ledger for level/attributes, gear, tree, quests, skills/conditions and interactions | Calculate both totals without reading saved PlayerStat outputs; match exact integers; every contribution traceable; unsupported modifiers surfaced | Implemented for supplied build; see BASELINE.md |
 | 3. Defence comparisons | Change one jewel to 20%, all five to 20%, and body-armour final local ES independently and together | Baseline unchanged when no edits; each scenario matches an independently recalculated PoB build; show absolute/relative change and assumptions | Pending |
 | 4. Two named interactions | Darkness Enthroned at 94% with Iron Rune variants; ring-effectiveness belt | Differential PoB fixtures validate socket context, effect scaling, per-mod rounding and each ring; verify representative game changes | Pending |
 
@@ -22,12 +23,12 @@ The current sensitivity worksheet is exploratory and does not satisfy milestone 
 
 ## Design decision
 
-Investigate a pinned PoB2 headless adapter before writing an independent general
-modifier engine. Reusing its tree, parser and calculation pipeline should reduce
-semantic drift. Keep it isolated behind a structured input/output boundary and
-record engine revision, game patch, active tree/item/config/skill sets and weapon set
-with each result. Inspect licensing before distributing upstream code or binaries.
-If a separate engine is ultimately chosen, preserve the same differential tests.
+The app now runs a pinned PoB2 headless adapter (`engine/calculator.py` and
+`engine/runner.lua`). It reuses the upstream tree, parser and calculation pipeline
+without changing their arithmetic. Results record the exact revision, tree and
+selected item/config/skill/tree sets. The supplied weapon-set choice is preserved
+in the XML. Upstream licences are retained with installed sources; no upstream
+code or binaries are vendored. See engine/THIRD_PARTY.md and docs/BASELINE.md.
 
 ## Regression cases required before V1 completion
 

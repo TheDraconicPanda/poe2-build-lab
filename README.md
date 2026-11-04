@@ -1,37 +1,59 @@
 # PoE2 Build Lab
 
-A local web workbench for understanding character defences and comparing upgrades.
-Initial target: **PoE2 0.5.5**, the supplied level 93 Abyssal Lich. The user confirmed
-that the exported **1,892 Life and 6,091 maximum ES** match the game.
+A local web workbench for character defences and upgrade research. The supplied
+level 93 Abyssal Lich's **1,892 Life / 6,091 ES** now independently recalculate
+with a pinned PoB2 engine, with saved outputs removed. The user confirmed these
+totals in PoE2 0.5.5. See [the exact breakdown](docs/BASELINE.md).
 
-## Run
+## Setup and run
 
-Requires Python 3.12 or newer. No package installation, API keys, database, or network
-access is needed to run the app.
+The importer needs Python 3.12+. The calculation engine additionally needs Git,
+Make, GCC and HTTPS access to GitHub during installation. It uses LuaJIT and
+luautf8, built locally from exact source commits in `engine/pins.json`.
 
 ```sh
 cd /workspace/poe2-build-lab
+python scripts/setup_engine.py
 python app.py --port 8000
 ```
 
-Open the app with a local browser. Paste a PoB2 export code, or choose an exported
-XML/text file and click Import. The server binds to loopback only. Imports are held
-in memory and not written to disk. The included regression fixture has item Unique
-IDs removed; it is not automatically loaded into the interface.
+Setup installs into ignored `.local/` paths, preserves TLS verification and checks
+source commits. It does not modify upstream calculation/data files. It is repeatable;
+existing pinned checkouts are reused. Dependencies keep their upstream licence
+files. Nothing is published or uploaded by setup. No API keys or database are needed.
+Once installed, calculation runs offline. Live server processes must restart after
+restoring an environment snapshot; dependencies persist only if included in that snapshot.
+
+Open the app with a local browser. Paste a PoB2 export code, or load an XML/text
+export and click Import. Then click **Recalculate baseline** for calculated totals,
+reference differences, ES contribution rows, the modifier source ledger and engine
+coverage notes. The server binds to loopback only. Imports use temporary files
+which are removed after calculation and are not saved as build history.
+
+Without engine setup, importing still works; recalculation reports the missing
+installation explicitly. Only passive tree `0_5` is accepted for calculation.
+The engine snapshot is validated against the supplied build, not every 0.5.5 build.
+An unparsed staff Archon modifier is surfaced instead of silently hidden.
+
+## Validate
 
 ```sh
+# Full suite, including real engine calculations (requires setup above):
 python -m unittest discover -s tests -v
+# Import-only suite without the engine:
+python -m unittest discover -s tests -p test_import.py -v
+# Optional browser smoke: running server + Playwright + /usr/bin/chromium:
+python tests/browser_smoke.py
 ```
 
-Current features: compressed-code/XML import, active equipment and allocated-jewel
-inventory, selected quest choices, saved PoB statistics, game-value comparison,
-and a clearly marked jewel sensitivity worksheet (one jewel or all jewels).
+The engine tests poison/remove saved outputs and change real item Life to check
+that calculation is independent and changes propagate to ES. Browser smoke checks
+imports, calculated totals, the ledger, game comparison, mobile layout and errors.
+The regression fixture has item Unique IDs removed.
 
-**The independent calculation engine is not implemented.** Saved PlayerStat values
-are reference targets, not evidence of recalculation. The sensitivity worksheet
-requires the complete global increased-ES pool and assumes unchanged base ES,
-more multipliers and modifier applicability. It is not a purchase recommendation.
-Chest, rune and ring-effectiveness predictions are deliberately not offered yet.
+The jewel sensitivity worksheet remains an illustrative formula, **not a verified
+upgrade prediction**. It assumes unchanged bases, more multipliers and applicability.
+Chest, rune and ring-effectiveness comparisons need scenario validation next.
 
-See [the finite project scope](docs/PROJECT.md) and
-[calculation research](docs/CALCULATIONS.md) for acceptance gates and remaining work.
+See [the finite V1 plan](docs/PROJECT.md), [calculation research](docs/CALCULATIONS.md),
+and [engine attribution](engine/THIRD_PARTY.md).
