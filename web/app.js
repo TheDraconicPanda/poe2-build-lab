@@ -15,7 +15,9 @@ $('import-form').addEventListener('submit', async event => {
   importedExport = null;
   $('calculated').hidden = true;
   $('calc-message').textContent = '';
-  $('calculate').disabled = false;
+  setEngineBusy(false);
+  $('scenario-results').hidden = true;
+  $('scenario-message').textContent = '';
   $('message').textContent = 'Reading export…';
   $('results').hidden = true;
   try {
@@ -40,13 +42,16 @@ $('import-form').addEventListener('submit', async event => {
     }));
     $('quests').replaceChildren(...data.quests.map(quest => { const li = document.createElement('li'); li.textContent = `${quest.name.replace(/^quest/, '')}: ${quest.value}`; return li; }));
     if (!data.quests.length) {const li = document.createElement('li'); li.textContent = 'No selected quest rewards exported.'; $('quests').append(li);}
-    $('jewel').replaceChildren(...data.jewels.filter(j => j.esIncrease != null).map(j => {const o = document.createElement('option'); o.value = j.id; o.textContent = `${j.name} (${j.esIncrease}%)`; return o;}));
-    for (const id of ['game-life','game-es','pool']) $(id).value = '';
-    $('all').checked = false;
+    $('jewel').replaceChildren(...data.jewels.map(j => {const o = document.createElement('option'); o.value = j.id; o.textContent = `${j.name} (${j.esIncrease == null ? 'no plain ES modifier' : `${j.esIncrease}% increased ES`})`; return o;}));
+    for (const id of ['game-life','game-es']) $(id).value = '';
+    $('edit-jewels').checked = true;
+    $('edit-chest').checked = false;
+    $('jewel-mode').value = 'one';
+    $('chest-es').value = 400;
     $('target').value = 20;
     $('results').hidden = false;
     $('message').textContent = `Imported ${data.equipment.length} equipped items and ${data.jewels.length} jewels.`;
-    compare(); estimate();
+    compare(); syncScenarioFields();
   } catch(error) { build = null; $('message').textContent = error.message; }
 });
 function compare() {
@@ -59,20 +64,64 @@ function compare() {
   }
   $('comparison').textContent = messages.join(' · ') || 'Enter game values to compare.';
 }
-function estimate() {
-  if (!build) return;
-  const candidates = build.jewels.filter(j => j.esIncrease != null && ($('all').checked || j.id === $('jewel').value));
-  if (!$('pool').value || !candidates.length || !$('pool').validity.valid || !$('target').validity.valid || !$('target').value || build.stats.EnergyShield == null) {
-    $('estimate').textContent = 'Enter a valid full increased-ES pool and select a jewel modifier.'; return;
-  }
-  const pool = Number($('pool').value), target = Number($('target').value);
-  const delta = candidates.reduce((sum, j) => sum + target - j.esIncrease, 0);
-  if (100 + pool + delta < 0) { $('estimate').textContent = 'The resulting increased-ES pool is invalid.'; return; }
-  const after = build.stats.EnergyShield * (100 + pool + delta) / (100 + pool);
-  $('estimate').textContent = `Illustrative ES: ${number(after)} (${after >= build.stats.EnergyShield ? '+' : ''}${number(after - build.stats.EnergyShield)}). Additive pool change: ${number(delta)} percentage points across ${candidates.length} jewel(s).`;
-}
 for (const id of ['game-life', 'game-es']) $(id).addEventListener('input', compare);
-for (const id of ['pool', 'jewel', 'target', 'all']) $(id).addEventListener('input', estimate);
+
+function syncScenarioFields() {
+  const enabled = $('edit-jewels').checked;
+  const mode = $('jewel-mode').value;
+  $('jewel-mode').disabled = !enabled;
+  $('jewel').disabled = !enabled || mode === 'all';
+  $('target').disabled = !enabled || mode === 'remove';
+  $('chest-es').disabled = !$('edit-chest').checked;
+}
+function setEngineBusy(busy) {
+  $('calculate').disabled = busy;
+  $('scenario-button').disabled = busy;
+  $('scenario-fields').disabled = busy;
+}
+for (const id of ['edit-jewels','edit-chest','jewel-mode','jewel','target','chest-es']) {
+  $(id).addEventListener('input', () => {
+    $('scenario-results').hidden = true;
+    $('scenario-message').textContent = '';
+    syncScenarioFields();
+  });
+}
+$('scenario-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!importedExport) return;
+  const generation = importGeneration;
+  const scenario = {};
+  if ($('edit-jewels').checked) {
+    scenario.jewels = {mode: $('jewel-mode').value};
+    if (scenario.jewels.mode !== 'all') scenario.jewels.itemId = $('jewel').value;
+    if (scenario.jewels.mode !== 'remove') scenario.jewels.targetPercent = Number($('target').value);
+  }
+  if ($('edit-chest').checked) scenario.chestEnergyShield = Number($('chest-es').value);
+  setEngineBusy(true);
+  $('scenario-results').hidden = true;
+  $('scenario-message').textContent = 'Calculating original and changed builds…';
+  try {
+    const response = await fetch('/api/compare', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export: importedExport, scenario})});
+    const data = await response.json();
+    if (generation !== importGeneration) return;
+    if (!response.ok) throw new Error(data.error);
+    tableRows('scenario-totals', ['Life','EnergyShield'].map(stat => {
+      const row = data.deltas[stat];
+      return [stat === 'Life' ? 'Life' : 'Energy Shield', number(row.before), number(row.after), `${row.absolute > 0 ? '+' : ''}${number(row.absolute)}`, row.percent == null ? '—' : `${row.percent > 0 ? '+' : ''}${number(row.percent)}%`];
+    }));
+    $('scenario-baseline').textContent = data.baseline.reconciled ? 'The original calculated Life and ES both match the imported reference.' : 'Original calculated totals do not match both imported reference values. Investigate the baseline before trusting this comparison.';
+    listRows('scenario-changes', data.changes.length ? data.changes.map(change => change.kind === 'removeJewel' ? `Remove ${change.name} from socket ${change.nodeId} (all its modifiers removed)` : `${change.name}: ${change.before} → ${change.after}${change.kind === 'chest' ? ' final local ES' : '% increased maximum ES'}`) : ['No changes requested.']);
+    const coverage = [...data.warnings];
+    for (const [label, side] of [['Original',data.baseline],['Changed',data.upgraded]]) {
+      for (const row of side.unsupported) coverage.push(`${label} unparsed modifier (${row.slot}): ${row.line}`);
+    }
+    listRows('scenario-warnings', coverage);
+    $('scenario-provenance').textContent = `Engine ${data.upgraded.provenance.commit} · tree ${data.upgraded.provenance.treeVersion} · Saved totals removed on both sides.`;
+    $('scenario-results').hidden = false;
+    $('scenario-message').textContent = 'Comparison complete.';
+  } catch(error) { if (generation === importGeneration) $('scenario-message').textContent = error.message; }
+  finally { if (generation === importGeneration) {setEngineBusy(false); syncScenarioFields();} }
+});
 
 function listRows(id, lines) {
   $(id).replaceChildren(...lines.map(text => {const li = document.createElement('li'); li.textContent = text; return li;}));
@@ -83,7 +132,7 @@ function tableRows(id, rows) {
 $('calculate').addEventListener('click', async () => {
   if (!importedExport) return;
   const generation = importGeneration;
-  $('calculate').disabled = true;
+  setEngineBusy(true);
   $('calculated').hidden = true;
   $('calc-message').textContent = 'Recalculating from items, tree, quests and skills. This can take up to a minute…';
   try {
@@ -107,5 +156,5 @@ $('calculate').addEventListener('click', async () => {
     $('calculated').hidden = false;
     $('calc-message').textContent = 'Recalculation complete.';
   } catch(error) { if (generation === importGeneration) $('calc-message').textContent = error.message; }
-  finally { if (generation === importGeneration) $('calculate').disabled = false; }
+  finally { if (generation === importGeneration) {setEngineBusy(false); syncScenarioFields();} }
 });

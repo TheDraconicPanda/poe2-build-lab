@@ -1,0 +1,12 @@
+{
+  "provenance": "Independent raw-export edits evaluated with PoB2 bb52d6b368307457eb9c54bb13f1829993d390b1. Original totals are user-confirmed in game; scenario totals are engine regression expectations, not additional game measurements.",
+  "cases": [
+    {"name":"no_change", "scenario":{}, "edits":[], "expected":{"Life":1892,"EnergyShield":6091}},
+    {"name":"one_jewel_16_to_20", "scenario":{"jewels":{"mode":"one","itemId":"2","targetPercent":20}}, "edits":[["16% increased maximum Energy Shield","20% increased maximum Energy Shield"]], "expected":{"Life":1892,"EnergyShield":6129}},
+    {"name":"all_jewels_to_20", "scenario":{"jewels":{"mode":"all","targetPercent":20}}, "edits":[["16% increased maximum Energy Shield","20% increased maximum Energy Shield"],["15% increased maximum Energy Shield","20% increased maximum Energy Shield"],["14% increased maximum Energy Shield","20% increased maximum Energy Shield"]], "expected":{"Life":1892,"EnergyShield":6234}},
+    {"name":"chest_200", "scenario":{"chestEnergyShield":200}, "edits":[["136% increased Evasion and Energy Shield","119% increased Evasion and Energy Shield"]], "expectedLocalChestES":200, "expected":{"Life":1892,"EnergyShield":5996}},
+    {"name":"chest_400", "scenario":{"chestEnergyShield":400}, "edits":[["136% increased Evasion and Energy Shield","339% increased Evasion and Energy Shield"]], "expectedLocalChestES":400, "expected":{"Life":1892,"EnergyShield":7262}},
+    {"name":"combined_all_and_chest", "scenario":{"jewels":{"mode":"all","targetPercent":20},"chestEnergyShield":400}, "edits":[["16% increased maximum Energy Shield","20% increased maximum Energy Shield"],["15% increased maximum Energy Shield","20% increased maximum Energy Shield"],["14% increased maximum Energy Shield","20% increased maximum Energy Shield"],["136% increased Evasion and Energy Shield","339% increased Evasion and Energy Shield"]], "expectedLocalChestES":400, "expected":{"Life":1892,"EnergyShield":7433}},
+    {"name":"remove_eagle_vessel", "scenario":{"jewels":{"mode":"remove","itemId":"2"}}, "edits":[["<Socket itemId=\"2\" nodeId=\"61834\"/>","<Socket itemId=\"0\" nodeId=\"61834\"/>"]], "expected":{"Life":1892,"EnergyShield":5938}}
+  ]
+}

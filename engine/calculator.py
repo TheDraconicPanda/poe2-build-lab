@@ -62,8 +62,12 @@ def prepare_input(text):
     return ET.tostring(root, encoding='unicode'), reference, metadata
 
 
-def calculate(text):
+def calculate(text, *, body_armour_es=None):
     xml, reference, metadata = prepare_input(text)
+    if body_armour_es is not None:
+        if type(body_armour_es) is not int or not 0 <= body_armour_es <= 100000:
+            raise ValueError('Final local chest ES must be an integer from 0 to 100000.')
+        metadata['bodyArmourEnergyShield'] = body_armour_es
     local = ROOT / '.local'
     runtime = local / 'luajit/bin/luajit'
     source = local / 'pob2'

@@ -26,6 +26,18 @@ local f = assert(io.open(inputPath, 'rb')); local xml = f:read('*a'); f:close()
 local m = assert(io.open(metadataPath, 'rb')); local request = assert(json.decode(m:read('*a'))); m:close()
 assert(not xml:find('<PlayerStat[%s/>]'), 'Saved totals must be stripped before calculation')
 loadBuildFromXML(xml, 'Build Lab')
+if request.bodyArmourEnergyShield ~= nil then
+ local item = build.calcsTab.mainEnv.player.itemList['Body Armour']
+ assert(item and item.armourData, 'No equipped body armour with local defence data')
+ assert((item.armourData.EnergyShieldPerLevel or 0) == 0, 'Level-dependent chest ES is not supported by this override')
+ -- Upstream ArmourData input overrides the final local defence after quality and
+ -- local modifiers. This changes an item input, not the character's final ES.
+ item.baseModList:NewMod('ArmourData', 'LIST', {key='EnergyShield', value=request.bodyArmourEnergyShield}, 'Build Lab final local ES scenario')
+ item:BuildModListsForSlots(item.baseModList)
+ assert(item:GetArmourDataValue('EnergyShield', build.characterLevel) == request.bodyArmourEnergyShield, 'Local ES override did not apply')
+ wipeGlobalCache()
+ build.calcsTab:BuildOutput()
+end
 local player = build.calcsTab.calcsEnv.player
 local output = build.calcsTab.mainOutput
 assert(output.Life and output.EnergyShield, 'Engine did not produce defence outputs')

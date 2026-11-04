@@ -48,12 +48,20 @@ python tests/browser_smoke.py
 
 The engine tests poison/remove saved outputs and change real item Life to check
 that calculation is independent and changes propagate to ES. Browser smoke checks
-imports, calculated totals, the ledger, game comparison, mobile layout and errors.
+imports, calculated totals, the ledger, game comparison, engine-backed upgrade scenarios, mobile layout and errors.
 The regression fixture has item Unique IDs removed.
 
-The jewel sensitivity worksheet remains an illustrative formula, **not a verified
-upgrade prediction**. It assumes unchanged bases, more multipliers and applicability.
-Chest, rune and ring-effectiveness comparisons need scenario validation next.
+The **Compare upgrades** form recalculates both sides through the engine: edit one
+jewel's increased-ES modifier, set all supported jewels to one target, remove a
+jewel, change chest final local ES, or combine these. Results show Life/ES totals,
+absolute/relative differences, precise edits and coverage notes. Changing form
+inputs hides stale results. All other item properties stay fixed; chest ES is not
+a complete item replacement or a crafting feasibility check.
+
+[Scenario validation and results](docs/SCENARIOS.md) include independent PoB input
+edits, no-change checks and a literal 200 → 400 chest comparison. These are
+pinned-engine predictions, not additional in-game measurements. Rune and
+ring-effectiveness interactions remain the next milestone.
 
 See [the finite V1 plan](docs/PROJECT.md), [calculation research](docs/CALCULATIONS.md),
 and [engine attribution](engine/THIRD_PARTY.md).

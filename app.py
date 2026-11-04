@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from engine.calculator import calculate, EngineUnavailable
+from engine.scenarios import compare_scenario
 
 ROOT = Path(__file__).parent
 LIMIT = 2_000_000
@@ -130,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_POST(self):
-        if self.path not in ('/api/import', '/api/calculate'):
+        if self.path not in ('/api/import', '/api/calculate', '/api/compare'):
             self.send_error(404)
             return
         try:
@@ -143,6 +144,8 @@ class Handler(BaseHTTPRequestHandler):
             result = parse_build(data['export'])
             if self.path == '/api/calculate':
                 result = calculate(data['export'])
+            elif self.path == '/api/compare':
+                result = compare_scenario(data['export'], data.get('scenario'))
             status = 200
         except EngineUnavailable as exc:
             result, status = dict(error=str(exc)), 503

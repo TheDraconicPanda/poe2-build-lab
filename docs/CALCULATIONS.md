@@ -52,8 +52,9 @@ is the only changed factor:
 `hypothetical ES = reference ES × (100 + pool + delta) / (100 + pool)`
 
 16% → 20% is **+4 percentage points**, not 4% more final ES. All five imported
-jewels to 20% adds 15 percentage points. The worksheet retains fractional results
-and advertises its assumptions; it is not independent baseline calculation.
+jewels to 20% adds 15 percentage points. The former worksheet retained fractional results and advertised its assumptions.
+It has now been replaced by engine-backed comparisons, including per-slot scaling
+and final rounding; see [SCENARIOS.md](SCENARIOS.md).
 
 ## Baseline milestone completed
 
@@ -61,4 +62,5 @@ The adapter strips saved outputs and independently calculates 1,892 Life / 6,091
 The evaluated global increased-ES pool is 533%, with an extra 70% for the helmet
 from Illuminated Crown. The detailed source ledger, rounding and conversion order
 are documented in [BASELINE.md](BASELINE.md). The speculative points above now
-have build-specific evidence there; socket and upgrade scenarios remain unverified.
+have build-specific evidence there; rune and ring-effectiveness scenarios remain unverified. Jewel/chest scenarios
+now have independent regression inputs in [SCENARIOS.md](SCENARIOS.md).
