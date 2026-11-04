@@ -80,7 +80,8 @@ changes hiding stale results, baseline coverage notes and mobile layout.
 Results retain engine source coverage notes on both sides, including the existing
 unparsed Nature's Archon staff modifier. A baseline/reference mismatch is shown
 prominently instead of marking the upgrade as reconciled. Rune and ring-effectiveness
-interactions remain milestone 4.
+comparisons are now implemented; see [INTERACTIONS.md](INTERACTIONS.md). Their
+representative in-game validation remains pending.
 
 ## API
 
@@ -101,3 +102,16 @@ Jewel modes: `one` requires itemId and targetPercent; `all` requires targetPerce
 `remove` requires itemId. The response includes both complete engine results,
 applied changes, absolute/relative differences, assumptions and provenance. No
 requests or imports are stored as build history.
+
+## Interaction request fields
+
+Add `darknessRune: {"socket": 1, "rune": "Iron Rune", "effectPercent": 94}`
+for a socket replacement, or `ingenuity: {"leftPercent": 30, "rightPercent": 20,
+"charmSlots": 3}` for the whole-belt replacement. These fields are mutually
+exclusive but can combine with jewel/chest changes. Augment effect is optional
+and defaults to the equipped belt’s explicit roll. Supported new augments are
+None and normal/greater/perfect Iron Rune.
+
+Results now also include diagnostic Spirit values and resolved belt/ring identities.
+Spirit has a known original-reference mismatch; negative unreserved Spirit yields
+a prominent conditional-skill warning rather than an automatic skill adjustment.

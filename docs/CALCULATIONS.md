@@ -62,5 +62,6 @@ The adapter strips saved outputs and independently calculates 1,892 Life / 6,091
 The evaluated global increased-ES pool is 533%, with an extra 70% for the helmet
 from Illuminated Crown. The detailed source ledger, rounding and conversion order
 are documented in [BASELINE.md](BASELINE.md). The speculative points above now
-have build-specific evidence there; rune and ring-effectiveness scenarios remain unverified. Jewel/chest scenarios
+have build-specific evidence there; rune and ring-effectiveness scenarios now have engine regression tests;
+[INTERACTIONS.md](INTERACTIONS.md) records their still-pending game check. Jewel/chest scenarios
 now have independent regression inputs in [SCENARIOS.md](SCENARIOS.md).

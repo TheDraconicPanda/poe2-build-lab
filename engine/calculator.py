@@ -36,6 +36,15 @@ def prepare_input(text):
             raise ValueError('Active passive tree is missing.') from exc
     if spec.get('treeVersion') != '0_5':
         raise ValueError('The pinned defence engine currently supports tree 0_5 only.')
+    resource_reference = {}
+    for stat in build.findall('PlayerStat'):
+        if stat.get('stat') in ('Spirit', 'SpiritUnreserved'):
+            try:
+                value = float(stat.get('value', ''))
+                if math.isfinite(value):
+                    resource_reference[stat.get('stat')] = value
+            except ValueError:
+                pass
     reference = {}
     for stat in build.findall('PlayerStat'):
         if stat.get('stat') in ('Life', 'EnergyShield'):
@@ -48,7 +57,7 @@ def prepare_input(text):
         build.remove(stat)
     for stat in build.findall('MinionStat'):
         build.remove(stat)
-    metadata = dict(nodes=[n for n in spec.get('nodes', '').split(',') if n],
+    metadata = dict(resourceReference=resource_reference, nodes=[n for n in spec.get('nodes', '').split(',') if n],
                     treeVersion=spec.get('treeVersion'), activeSpec=tree.get('activeSpec'),
                     activeItemSet=root.find('Items').get('activeItemSet') if root.find('Items') is not None else None,
                     useSecondWeaponSet=(root.find('Items').get('useSecondWeaponSet') if root.find('Items') is not None else None),

@@ -14,8 +14,8 @@ def integer(value, label, maximum):
 
 def apply_scenario(text, scenario):
     from app import decode_build, parse_build
-    if not isinstance(scenario, dict) or set(scenario) - {'jewels', 'chestEnergyShield'}:
-        raise ValueError('Scenario accepts only jewels and chestEnergyShield.')
+    if not isinstance(scenario, dict) or set(scenario) - {'jewels', 'chestEnergyShield', 'darknessRune', 'ingenuity'}:
+        raise ValueError('Unsupported scenario field.')
     build = parse_build(text)
     root = decode_build(text)
     changes = []
@@ -68,6 +68,76 @@ def apply_scenario(text, scenario):
         if chest is None:
             raise ValueError('No body armour is equipped in the active item set.')
         changes.append(dict(kind='chest', itemId=chest['id'], name=chest['name'], after=chest_es))
+    if 'darknessRune' in scenario and 'ingenuity' in scenario:
+        raise ValueError('Choose a Darkness Enthroned rune swap or an Ingenuity replacement, not both.')
+    if 'darknessRune' in scenario:
+        config = scenario['darknessRune']
+        if not isinstance(config, dict) or set(config) - {'socket', 'rune', 'effectPercent'}:
+            raise ValueError('Invalid Darkness Enthroned scenario.')
+        socket = integer(config.get('socket'), 'Socket number', 2)
+        if socket < 1:
+            raise ValueError('Socket number must be 1 or 2.')
+        rune = config.get('rune')
+        if rune not in ('None', 'Iron Rune', 'Greater Iron Rune', 'Perfect Iron Rune'):
+            raise ValueError('Select a supported Iron Rune or an empty socket.')
+        belt = next((i for i in build['equipment'] if i['slot'] == 'Belt'), None)
+        if belt is None or belt['name'] != 'Darkness Enthroned':
+            raise ValueError('Darkness Enthroned must be equipped for a rune swap.')
+        if 'This item gains bonuses from Socketed Items as though it was a Body Armour' not in belt['text']:
+            raise ValueError('Only the Body Armour variant of Darkness Enthroned is validated.')
+        item = next(i for i in root.findall('./Items/Item') if i.get('id') == belt['id'])
+        lines = item.text.splitlines(keepends=True)
+        rune_indices = [index for index,line in enumerate(lines) if line.strip().startswith('Rune: ')]
+        sockets = [line for line in lines if line.strip().startswith('Sockets: ')]
+        if len(sockets) != 1 or len(sockets[0].strip().split()[1:]) != 2 or len(rune_indices) != 2:
+            raise ValueError('Expected two explicit socket bindings, including Rune: None for an empty socket.')
+        index = rune_indices[socket - 1]
+        previous = lines[index].strip().removeprefix('Rune: ')
+        if previous not in ('None', 'Fox Idol', 'Rune of the Blossom', 'Iron Rune', 'Greater Iron Rune', 'Perfect Iron Rune'):
+            raise ValueError('The existing augment is outside the validated set.')
+        lines[index] = re.sub(r'Rune: [^\r\n]+', 'Rune: ' + rune, lines[index])
+        effects = [(i,re.fullmatch(r'(\s*)(\d+)% increased effect of Socketed Augment Items(\s*)', line)) for i,line in enumerate(lines)]
+        effects = [(i,m) for i,m in effects if m]
+        if len(effects) != 1:
+            raise ValueError('Expected one explicit augment-effect roll.')
+        effect_index, match = effects[0]
+        old_effect = int(match[2])
+        effect = config.get('effectPercent', old_effect)
+        integer(effect, 'Augment effect', 100)
+        if effect < 50:
+            raise ValueError('Darkness Enthroned augment effect must be 50–100%.')
+        lines[effect_index] = f'{match[1]}{effect}% increased effect of Socketed Augment Items{match[3]}'
+        item.text = ''.join(lines)
+        changes.append(dict(kind='darknessRune', name=belt['name'], socket=socket, before=previous, after=rune,
+                            effectBefore=old_effect, effectAfter=effect))
+    if 'ingenuity' in scenario:
+        config = scenario['ingenuity']
+        if not isinstance(config, dict) or set(config) - {'leftPercent', 'rightPercent', 'charmSlots'}:
+            raise ValueError('Invalid Ingenuity scenario.')
+        left = integer(config.get('leftPercent'), 'Left-ring effect', 30)
+        right = integer(config.get('rightPercent'), 'Right-ring effect', 30)
+        slots = integer(config.get('charmSlots'), 'Charm slots', 3)
+        if min(left,right) < 20 or slots < 1:
+            raise ValueError('Current Ingenuity requires 20–30% per ring and 1–3 charm slots.')
+        belt = next((i for i in build['equipment'] if i['slot'] == 'Belt'), None)
+        if belt is None:
+            raise ValueError('Equip a belt before comparing its replacement.')
+        item = next(i for i in root.findall('./Items/Item') if i.get('id') == belt['id'])
+        item.text = f'''\nRarity: UNIQUE
+Ingenuity
+Utility Belt
+Implicits: 2
+Has {slots} Charm Slots
+20% of Flask Recovery applied Instantly
+0% reduced Charm Charges gained
+0% reduced Charm Charges used
+{left}% increased bonuses gained from left Equipped Ring
+{right}% increased bonuses gained from right Equipped Ring
+'''
+        for child in list(item):
+            item.remove(child)
+        changes.append(dict(kind='ingenuity', name='Belt replacement', before=belt['name'], after='Ingenuity',
+                            leftPercent=left, rightPercent=right, charmSlots=slots))
     return ET.tostring(root, encoding='unicode'), chest_es, changes
 
 
@@ -89,6 +159,19 @@ def compare_scenario(text, scenario):
         'Jewel stat edits retain every other modifier. All-jewel mode includes allocated jewels with the supported plain ES modifier.',
         'Chest ES is final local ES after quality and local modifiers. Other chest stats, sockets and effects stay fixed; this is not a full item replacement or a claim that the item can be crafted.',
     ]
+    if 'darknessRune' in scenario:
+        warnings.append('The selected augment is replaced, including its regular and Bonded effects. PoB rebuilds all rune effects in the Body Armour context; a rune Bonded line is not automatically active.')
+    if 'ingenuity' in scenario:
+        warnings.append('Ingenuity replaces the entire belt and removes its socketed effects. Left = Ring 1, right = Ring 2. This current-version template uses neutral charm-charge rolls; it is not a legacy 40–80% belt.')
+    for label, side in [('Original', baseline), ('Changed', after)]:
+        if side.get('resources', {}).get('SpiritUnreserved', 0) < 0:
+            warnings.insert(0, f'{label} build has insufficient Spirit for the selected skills. Defence totals are conditional on that skill setup and cannot be treated as a usable upgrade without fixing reservations.')
+    saved_resources = baseline['provenance']['selection'].get('resourceReference', {})
+    for stat, saved in saved_resources.items():
+        calculated = baseline.get('resources', {}).get(stat)
+        if calculated is not None and calculated != saved:
+            warnings.append(f'{stat} is diagnostic and not reconciled: original engine value {calculated}, exported value {saved:g}.')
     if not baseline['reconciled']:
+
         warnings.insert(0, 'The calculated baseline does not match both exported totals. Resolve the baseline before trusting an upgrade.')
     return dict(baseline=baseline, upgraded=after, changes=changes, deltas=deltas, warnings=warnings)

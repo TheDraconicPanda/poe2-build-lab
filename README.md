@@ -60,8 +60,15 @@ a complete item replacement or a crafting feasibility check.
 
 [Scenario validation and results](docs/SCENARIOS.md) include independent PoB input
 edits, no-change checks and a literal 200 → 400 chest comparison. These are
-pinned-engine predictions, not additional in-game measurements. Rune and
-ring-effectiveness interactions remain the next milestone.
+pinned-engine predictions, not additional in-game measurements. The belt controls also support Darkness Enthroned (Body Armour variant) Iron Rune
+swaps and current Ingenuity replacements with separate ring-side bonuses. They
+remove displaced item/socket effects, surface conditional Spirit reservations and
+show evaluated sources. See [interaction results and limits](docs/INTERACTIONS.md).
+
+**All four milestones are implemented; V1 acceptance still needs a representative
+in-game rune/belt before-and-after check.** Spirit is diagnostic only: the original
+snapshot's unreserved Spirit differs from the export (38 versus 36). Engine-backed
+interaction tests do not replace game verification.
 
 See [the finite V1 plan](docs/PROJECT.md), [calculation research](docs/CALCULATIONS.md),
 and [engine attribution](engine/THIRD_PARTY.md).

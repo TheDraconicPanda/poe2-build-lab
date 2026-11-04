@@ -17,7 +17,10 @@ not independent verification. No calibrating unknown contributions to force tota
 | 1. Import and audit | Local web app reads PoB2 XML/export codes, active gear, jewels, quests and reference totals | Actual supplied export imports; 14 equipped items, five allocated jewels; 1,892 Life / 6,091 ES displayed explicitly as exported | Implemented |
 | 2. Reconciled baseline | Versioned engine adapter plus source ledger for level/attributes, gear, tree, quests, skills/conditions and interactions | Calculate both totals without reading saved PlayerStat outputs; match exact integers; every contribution traceable; unsupported modifiers surfaced | Implemented for supplied build; see BASELINE.md |
 | 3. Defence comparisons | Change one jewel to 20%, all five to 20%, and body-armour final local ES independently and together | Baseline unchanged when no edits; each scenario matches an independently recalculated PoB build; show absolute/relative change and assumptions | Implemented for supported edits; see SCENARIOS.md |
-| 4. Two named interactions | Darkness Enthroned at 94% with Iron Rune variants; ring-effectiveness belt | Differential PoB fixtures validate socket context, effect scaling, per-mod rounding and each ring; verify representative game changes | Pending |
+| 4. Two named interactions | Darkness Enthroned at 94% with Iron Rune variants; ring-effectiveness belt | Differential PoB fixtures validate socket context, effect scaling, per-mod rounding and each ring; verify representative game changes | Engine features implemented; in-game before/after check pending (INTERACTIONS.md) |
+
+Implementation now covers all four milestones. V1 acceptance remains pending the
+representative interaction game check; no further feature scope is implied.
 
 The sensitivity worksheet has been replaced with engine-backed comparisons.
 Milestone 3 covers isolated final local chest ES, not wholesale item replacement.

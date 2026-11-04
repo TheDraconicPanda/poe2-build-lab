@@ -43,10 +43,22 @@ local output = build.calcsTab.mainOutput
 assert(output.Life and output.EnergyShield, 'Engine did not produce defence outputs')
 assert(output.Life == player.output.Life and output.EnergyShield == player.output.EnergyShield, 'Main and Calcs defence modes differ; align the Calcs buff mode before auditing the baseline')
 local result = {totals = {Life = output.Life, EnergyShield = output.EnergyShield}, attributes = {Str=output.Str, Dex=output.Dex, Int=output.Int}, ledger = {}, breakdown = {}, items = {}, unsupported = {}, diagnostics = logs}
+result.resources = {Spirit=output.Spirit, SpiritUnreserved=output.SpiritUnreserved}
+result.equipment = {}
+for slot, item in pairs(build.calcsTab.mainEnv.player.itemList) do
+ if slot == 'Belt' or slot == 'Ring 1' or slot == 'Ring 2' then
+  local entry = {slot=slot, name=item.name, runes={}, runeLines={}}
+  for i=1,item.itemSocketCount or 0 do entry.runes[i]=item.runes[i] or 'None' end
+  for _,line in ipairs(item.runeModLines or {}) do
+   entry.runeLines[#entry.runeLines+1]={line=line.line, bonded=line.bonded or false}
+  end
+  result.equipment[#result.equipment+1]=entry
+ end
+end
 local db = player.modDB
 local names = {}
 for name in pairs(db.mods) do
- if name:find('Life') or name:find('EnergyShield') or name == 'Defences' or name == 'Str' or name == 'Int' then names[#names + 1] = name end
+ if name:find('Life') or name:find('EnergyShield') or name == 'Defences' or name == 'Str' or name == 'Int' or name == 'Spirit' or name:find('EffectOfBonusesFromRing') then names[#names + 1] = name end
 end
 table.sort(names)
 for _, name in ipairs(names) do
@@ -91,6 +103,7 @@ for _, slot in ipairs({'Helmet', 'Body Armour', 'Gloves', 'Boots', 'Weapon 2'}) 
  end
 end
 for _, row in ipairs(result.ledger) do
+ row.source = StripEscapes(row.source)
  local id = row.source:match('^Tree:(%d+)')
  local node = id and build.spec.tree.nodes[tonumber(id)]
  if node then row.sourceName = node.name end
