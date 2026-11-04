@@ -5,7 +5,7 @@ export async function saveBuild(record) {const db=await database();try{await new
 export async function deleteBuild(id) {const db=await database();try{await new Promise((resolve,reject)=>{const tx=db.transaction('builds','readwrite');tx.objectStore('builds').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 export function downloadBackup(records) {
   const blob=new Blob([JSON.stringify({format:'poe2-build-lab',version:1,builds:records},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='poe2-build-lab-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  a.href=url;a.download='poe2-build-lab-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 export function readBackup(text) {
   const data=JSON.parse(text);

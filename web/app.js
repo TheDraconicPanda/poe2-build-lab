@@ -216,7 +216,18 @@ async function persistCurrent() {
 $('save-build').addEventListener('click',persistCurrent);
 $('load-build').addEventListener('click',()=>{const record=records.find(r=>r.id===$('saved-builds').value);if(!record)return;pendingSave=record;$('export').value=record.export;$('import-form').requestSubmit();});
 $('delete-build').addEventListener('click',async()=>{const id=$('saved-builds').value;if(!id)return;try{await deleteBuild(id);if(id===activeSaveId)activeSaveId=crypto.randomUUID();await refreshLibrary();$('library-status').textContent='Saved copy removed. The current imported build is still open.';}catch(error){$('library-status').textContent=error.message;}});
-$('export-backup').addEventListener('click',async()=>{await persistCurrent();if(records.length)downloadBackup(records);else $('library-status').textContent='Import a build before exporting a backup.';});
+$('export-backup').addEventListener('click',()=>{
+  const snapshot=[...records];
+  if(importedExport) {
+    const record={id:activeSaveId,name:$('build-name').value.trim().slice(0,200)||'Saved build',export:importedExport,scenario:currentScenario(),updatedAt:Date.now()};
+    const index=snapshot.findIndex(r=>r.id===record.id);
+    if(index>=0)snapshot[index]=record;else snapshot.push(record);
+  }
+  // Start the file download within the tap gesture for iOS Safari. IndexedDB
+  // writes can finish afterward; the backup already contains the current state.
+  if(snapshot.length) {downloadBackup(snapshot);void persistCurrent();}
+  else $('library-status').textContent='Import a build before exporting a backup.';
+});
 $('backup-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>20_000_000)throw new Error('Backup exceeds 20 MB.');const restored=readBackup(await file.text());for(const record of restored){applyScenario(await decodeExport(record.export),record.scenario);const existing=records.find(r=>r.id===record.id);await saveBuild({...record,id:existing?crypto.randomUUID():record.id});}await refreshLibrary();$('library-status').textContent=`Restored ${restored.length} build(s). Select one and tap Load.`;}catch(error){$('library-status').textContent=error.message;}finally{event.target.value='';}});
 $('cancel-calculation').addEventListener('click',()=>{cancelCalculation();setEngineBusy(false);syncScenarioFields();});
 await refreshLibrary();
