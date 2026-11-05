@@ -1,4 +1,9 @@
-# Finite scope: defence upgrades for one verified build
+# Finite scope: defence upgrades for one build
+
+**Acceptance is blocked on baseline reconciliation.** New reported game values
+(1,891 Life / 6,949 ES) differ from the original export regression. See
+[GAME-RECONCILIATION.md](GAME-RECONCILIATION.md). Matching the original export
+is still an engine-parity check; it does not settle this discrepancy.
 
 ## Target and completion rule
 

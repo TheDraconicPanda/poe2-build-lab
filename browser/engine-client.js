@@ -40,7 +40,7 @@ export async function request(method, data, progress=()=>{}) {
   progress('Calculating changed build locally…');const after=await calculateXML(edited.xml,edited.chestES,progress);
   for(const change of edited.changes) if(change.kind==='chest') change.before=baseline.items.find(i=>i.slot==='Body Armour')?.energyShield;
   const deltas=Object.fromEntries(Object.entries(baseline.totals).map(([stat,value])=>[stat,{before:value,after:after.totals[stat],absolute:after.totals[stat]-value,percent:value?(after.totals[stat]-value)/value*100:null}]));
-  const warnings=['Calculated entirely on your device with the pinned PoB engine. Only the original Life/ES baseline is confirmed in game.','Jewel stat edits retain other modifiers; chest ES holds its other stats and sockets fixed.'];
+  const warnings=['Calculated entirely on your device with the pinned PoB engine. Current game validation is unresolved. Matching an exported reference does not prove game accuracy.','Jewel stat edits retain other modifiers; chest ES holds its other stats and sockets fixed.'];
   if(data.scenario.darknessRune) warnings.push('The selected augment and its Bonded benefits are replaced. Rune modifiers are rebuilt in the Body Armour context.');
   if(data.scenario.ingenuity) warnings.push('Ingenuity replaces the entire belt and removes its socket effects. Left = Ring 1; right = Ring 2. The current-version template has neutral charm-charge rolls.');
   for(const [label,side] of [['Original',baseline],['Changed',after]]) if(side.resources.SpiritUnreserved<0) warnings.unshift(`${label} build has insufficient Spirit for the selected skills. Defence totals are conditional on that skill setup.`);

@@ -155,7 +155,7 @@ def compare_scenario(text, scenario):
                         percent=(after['totals'][stat] - value) / value * 100 if value else None)
               for stat, value in baseline['totals'].items()}
     warnings = [
-        'Results use the pinned PoB2 snapshot; only the original baseline is confirmed in game.',
+        'Results use the pinned PoB2 snapshot; current game validation is unresolved. Export parity does not prove game accuracy.',
         'Jewel stat edits retain every other modifier. All-jewel mode includes allocated jewels with the supported plain ES modifier.',
         'Chest ES is final local ES after quality and local modifiers. Other chest stats, sockets and effects stay fixed; this is not a full item replacement or a claim that the item can be crafted.',
     ]

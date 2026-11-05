@@ -1,4 +1,7 @@
-# Reconciled baseline: supplied Abyssal Lich
+# Historical export regression: supplied Abyssal Lich
+
+**Current game measurements differ.** This page explains reproduction of the old
+export, not a verified current game baseline. See [GAME-RECONCILIATION.md](GAME-RECONCILIATION.md).
 
 The user confirmed this build's 1,892 Life and 6,091 maximum Energy Shield in
 PoE2 **0.5.5**. The pinned PoB2 snapshot independently reproduces both integers

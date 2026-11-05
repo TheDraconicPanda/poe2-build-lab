@@ -1,0 +1,12 @@
+{
+  "status": "unreconciled",
+  "source": "User-reported game measurements, superseding the earlier baseline confirmation",
+  "full": {"Life": 1891, "EnergyShield": 6949},
+  "helmetRemoved": {"EnergyShield": 4548},
+  "jewelRemoved": {"name": "Luminous Shard", "originalExportItemId": "1", "increasedMaximumEnergyShieldPercent": 20, "EnergyShield": 6758},
+  "userContext": "No gear change since syncing the PoB on Ninja",
+  "unconfirmedContext": ["Exact current Ninja export", "Skill and conditional-buff state during measurements", "Life after each removal"],
+  "historicalExportReference": {"Life": 1892, "EnergyShield": 6091},
+  "diagnosticOnly": {"extraGlobalIncreasedESPercentagePoints": 90, "fitsAllThreeReportedESIntegers": true, "sourceIdentified": false, "appliedToApp": false},
+  "lifeRoundingHypothesis": "The historical raw Life is 1891.773. Nearest rounding gives 1892 and truncation gives 1891; the actual discrepancy's cause is not yet confirmed."
+}

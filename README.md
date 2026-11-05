@@ -1,5 +1,10 @@
 # PoE2 Build Lab — browser edition
 
+**Game validation is open:** current reported game values are 1,891 Life / 6,949 ES.
+The original export regression calculates 1,892 / 6,091. See
+[the reconciliation investigation](docs/GAME-RECONCILIATION.md). No calibration
+has been applied to force a match.
+
 A static, browser-only Life/ES upgrade workbench for GitHub Pages and Safari 17+.
 **No Python server, account, PC access or external calculation API is needed to use
 it.** The pinned PoB2 engine runs as Lua 5.4 WebAssembly in a browser worker.
